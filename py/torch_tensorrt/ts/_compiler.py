@@ -26,7 +26,7 @@ def compile(module: torch.jit.ScriptModule,
             require_full_compilation=False,
             min_block_size=3,
             torch_executed_ops=[],
-            torch_executed_modules=[]) -> torch.jit.ScriptModule:
+            trt_executed_modules=[]) -> torch.jit.ScriptModule:
     """Compile a TorchScript module for NVIDIA GPUs using TensorRT
 
     Takes a existing TorchScript module and a set of settings to configure the compiler
@@ -73,7 +73,7 @@ def compile(module: torch.jit.ScriptModule,
         require_full_compilation (bool): Require modules to be compiled end to end or return an error as opposed to returning a hybrid graph where operations that cannot be run in TensorRT are run in PyTorch
         min_block_size (int): The minimum number of contiguous TensorRT convertable operations in order to run a set of operations in TensorRT
         torch_executed_ops (List[str]): List of aten operators that must be run in PyTorch. An error will be thrown if this list is not empty but ``require_full_compilation`` is True
-        torch_executed_modules (List[str]): List of modules that must be run in PyTorch. An error will be thrown if this list is not empty but ``require_full_compilation`` is True
+        trt_executed_modules (List[str]): List of modules that must be run in PyTorch. An error will be thrown if this list is not empty but ``require_full_compilation`` is True
 
     Returns:
         torch.jit.ScriptModule: Compiled TorchScript Module, when run it will execute via TensorRT
@@ -83,10 +83,10 @@ def compile(module: torch.jit.ScriptModule,
         raise TypeError(
             "torch.jit.ScriptFunction currently is not directly supported, wrap the function in a module to compile")
 
-    if require_full_compilation and (len(torch_executed_modules) > 0 or len(torch_executed_ops) > 0):
+    if require_full_compilation and (len(trt_executed_modules) > 0 or len(torch_executed_ops) > 0):
         raise ValueError(
             "require_full_compilation is enabled however the list of modules and ops to run in torch is not empty. Found: torch_executed_ops: "
-            + torch_executed_ops + ", torch_executed_modules: " + torch_executed_modules)
+            + torch_executed_ops + ", trt_executed_modules: " + trt_executed_modules)
 
     spec = {
         "inputs": inputs,
@@ -105,7 +105,7 @@ def compile(module: torch.jit.ScriptModule,
         "torch_fallback": {
             "enabled": not require_full_compilation,
             "forced_fallback_ops": torch_executed_ops,
-            "forced_fallback_modules": torch_executed_modules,
+            "forced_fallback_modules": trt_executed_modules,
             "min_block_size": min_block_size
         }
     }

@@ -78,20 +78,28 @@ void NotateModuleForFallback(
           break;
         }
         auto sub_mod_name = sub_mod_src_n->s(c10::Symbol::attr("name"));
+
+        bool found = false;
         for (const auto sub_mod : mod.named_children()) {
           // Theres probably a way to directly access the module we care about
           if (sub_mod.name == sub_mod_name) {
+            found = true;
             LOG_GRAPH(
                 "Looking at <module>.<method>() next: " << sub_mod_name << "." << sub_method_name
                                                         << "() (lowering.passes.NotateModuleForFallback)");
             NotateModuleForFallback(sub_mod.value, sub_mod.name, sub_method_name, forced_fallback_modules);
           }
-          for(const auto sub_mod2: sub_mod.value.named_children()) {
-            if(sub_mod2.name == sub_mod_name){
+        }
+        
+        if(!found){
+          for(const auto sub_mod: mod.named_modules()) {
+            if(sub_mod.name.length() > sub_mod_name.length() && 
+            sub_mod.name[sub_mod.name.length() - sub_mod_name.length() - 1] == '.' &&
+            sub_mod.name.substr(sub_mod.name.length() - sub_mod_name.length()) == sub_mod_name){
               LOG_GRAPH(
-                "Looking at <module>.<method>() next: " << sub_mod_name << "." << sub_method_name
+                "Looking at <module>.<method>() next: " << sub_mod.name << "." << sub_method_name
                                                         << "() (lowering.passes.NotateModuleForFallback)");
-              NotateModuleForFallback(sub_mod2.value, sub_mod2.name, sub_method_name, forced_fallback_modules);
+              NotateModuleForFallback(sub_mod.value, sub_mod.name, sub_method_name, forced_fallback_modules);
             }
           }
         }
@@ -135,8 +143,8 @@ void MarkNodesForFallback(std::shared_ptr<torch::jit::Graph>& g, bool delete_del
         LOG_WARNING("Found the end of segmented block targeted for torch while not actively marking a block");
       }
     } else if (mark.top()) {
-      LOG_GRAPH("Marking " << util::node_info(n) << " to run in PyTorch");
-      n->i_(c10::Symbol::attr("to_compile"), (int64_t) false);
+      LOG_GRAPH("Marking " << util::node_info(n) << " to run in TensorRT");
+      n->i_(c10::Symbol::attr("to_compile"), (int64_t) true);
     }
   }
 

@@ -488,13 +488,13 @@ bool should_run_in_trt(torch::jit::Node* n, const std::unordered_set<std::string
 
   // If the user specifies the module containing this op to run in torch it should run in PyTorch
   const auto to_compile_sym = c10::Symbol::attr("to_compile");
-  if (n->hasAttribute(to_compile_sym) && n->i(to_compile_sym) == (int64_t) false) {
-    LOG_GRAPH("Node is within a module set to run in torch: " << util::node_info(n));
-    return false;
+  if (n->hasAttribute(to_compile_sym) && n->i(to_compile_sym) == (int64_t) true) {
+    LOG_GRAPH("Node is within a module set to run in TensorRT: " << util::node_info(n));
+    return true;
   }
 
-  LOG_GRAPH("Node is going to run in TensorRT: " << util::node_info(n));
-  return true;
+  LOG_GRAPH("Node is going to run in torch: " << util::node_info(n));
+  return false;
 }
 
 void finalize_block(
