@@ -20,7 +20,7 @@ PartitionedGraph segment_graph(torch::jit::Block* block, const PartitionInfo& pa
 
 PartitionedGraph Partition(
     torch::jit::Block* block,
-    std::unordered_map<const torch::jit::Value*, torch::jit::IValue>& example_tensor_map,
+    std::vector<std::unordered_map<const torch::jit::Value*, torch::jit::IValue>>& example_tensor_map,
     const PartitionInfo& partition_info);
 
 std::ostream& operator<<(std::ostream& os, const PartitionedGraph& g);

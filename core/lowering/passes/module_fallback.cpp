@@ -86,6 +86,14 @@ void NotateModuleForFallback(
                                                         << "() (lowering.passes.NotateModuleForFallback)");
             NotateModuleForFallback(sub_mod.value, sub_mod.name, sub_method_name, forced_fallback_modules);
           }
+          for(const auto sub_mod2: sub_mod.value.named_children()) {
+            if(sub_mod2.name == sub_mod_name){
+              LOG_GRAPH(
+                "Looking at <module>.<method>() next: " << sub_mod_name << "." << sub_method_name
+                                                        << "() (lowering.passes.NotateModuleForFallback)");
+              NotateModuleForFallback(sub_mod2.value, sub_mod2.name, sub_method_name, forced_fallback_modules);
+            }
+          }
         }
       }
     }

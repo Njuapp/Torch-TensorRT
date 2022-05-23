@@ -411,14 +411,20 @@ void registerSegmentsOutputs(PartitionedGraph& segmented_blocks, torch::jit::Blo
   // should be careful here because some in-place operations don't return any values, there is no output for this kind
   // of segment identify the output for each mini-graph by checking if any value in this graph is used later we
   // shouldn't register nonTensor output for TensorRT segments
+  int  i = 0;
   for (auto& seg_block : segmented_blocks) {
+    LOG_DEBUG("Register output for Graph @" << i);
+    i ++;
     for (auto& mini_graph_input : input_values) {
       if (std::find(seg_block.raw_inputs().begin(), seg_block.raw_inputs().end(), mini_graph_input) ==
               seg_block.raw_inputs().end() &&
           seg_block.contain_raw_value(mini_graph_input)) {
-        if (!isTensorOrTensorList(mini_graph_input) && seg_block.target() == SegmentedBlock::kTensorRT)
+        if (!isTensorOrTensorList(mini_graph_input) && seg_block.target() == SegmentedBlock::kTensorRT){
+          LOG_DEBUG("Ignoring jit::Value " << mini_graph_input->debugName() << "\n");
           continue;
+        }
         seg_block.registerOutput(mini_graph_input);
+        LOG_DEBUG("Register jit::Value " << mini_graph_input->debugName() << "\n");
       }
     }
     // if no output, then register the last node's output as current graph's output
@@ -581,7 +587,7 @@ PartitionedGraph segment_graph(torch::jit::Block* block, const PartitionInfo& pa
 
 PartitionedGraph Partition(
     torch::jit::Block* block,
-    std::unordered_map<const torch::jit::Value*, torch::jit::IValue>& example_tensor_map,
+    std::vector<std::unordered_map<const torch::jit::Value*, torch::jit::IValue>>& example_tensor_maps,
     const PartitionInfo& partition_info) {
   LOG_DEBUG(partition_info);
   // segment lowering global graph into blocks
@@ -595,8 +601,13 @@ PartitionedGraph Partition(
   LOG_DEBUG("Registering input/output torch::jit::Value for segmented graphs");
   registerSegmentsOutputs(segmented_blocks, block);
 
+  for (uint64_t i = 0; i < segmented_blocks.size(); i++) {
+    segmented_blocks[i].update_id(i);
+  }
+  LOG_DEBUG(segmented_blocks);
+
   // run shape analysis on each segmented block
-  runShapeAnalysis(segmented_blocks, example_tensor_map, partition_info);
+  runShapeAnalysis(segmented_blocks, example_tensor_maps, partition_info);
 
   for (uint64_t i = 0; i < segmented_blocks.size(); i++) {
     segmented_blocks[i].update_id(i);

@@ -221,7 +221,7 @@ void AddIfBlockToGraph(
 GraphAndMapping ConstructFallbackGraph(
     torch::jit::script::Module& new_mod,
     torch::jit::Block* block,
-    std::unordered_map<const torch::jit::Value*, torch::jit::IValue> example_tensor_map,
+    std::vector<std::unordered_map<const torch::jit::Value*, torch::jit::IValue>> example_tensor_maps,
     CompileSpec cfg,
     ir::StaticParams static_params) {
   auto convert_cfg = cfg.convert_info;
@@ -229,7 +229,7 @@ GraphAndMapping ConstructFallbackGraph(
 
   auto new_g = std::make_shared<torch::jit::Graph>();
 
-  auto segmented_blocks = partitioning::Partition(block, example_tensor_map, partition_info);
+  auto segmented_blocks = partitioning::Partition(block, example_tensor_maps, partition_info);
 
   // the mapping from lowering graph => fallback global graph
   std::unordered_map<torch::jit::Value*, torch::jit::Value*> old_to_new_g;
@@ -270,7 +270,7 @@ GraphAndMapping ConstructFallbackGraph(
         std::vector<GraphAndMapping> graph_and_mappings;
         for (auto cur_block : if_node->blocks()) {
           graph_and_mappings.push_back(
-              ConstructFallbackGraph(new_mod, cur_block, example_tensor_map, cfg, static_params));
+              ConstructFallbackGraph(new_mod, cur_block, example_tensor_maps, cfg, static_params));
         }
         AddIfBlockToGraph(new_g, if_node, graph_and_mappings, old_to_new_g);
 
@@ -429,8 +429,8 @@ torch::jit::Module CompileGraph(const torch::jit::Module& mod, CompileSpec cfg) 
       if (cfg.partition_info.enabled &&
           !(cfg.lower_info.forced_fallback_modules.size() == 0 &&
             cfg.partition_info.forced_fallback_operators.size() == 0 && isBlockConvertible)) {
-        auto input_ivalues_map = partitioning::generateRandomInputs(cfg.convert_info.inputs, first_use_types);
-        auto graph_and_mapping = ConstructFallbackGraph(new_mod, g->block(), input_ivalues_map, cfg, static_params);
+        auto input_ivalues_maps = partitioning::generateRandomInputs(cfg.convert_info.inputs, first_use_types);
+        auto graph_and_mapping = ConstructFallbackGraph(new_mod, g->block(), input_ivalues_maps, cfg, static_params);
         new_g = graph_and_mapping.first;
         LOG_INFO("Segmented Graph: " << *new_g);
 
@@ -446,6 +446,15 @@ torch::jit::Module CompileGraph(const torch::jit::Module& mod, CompileSpec cfg) 
             "Not all operations in graph are supported by the compiler");
         auto engine = conversion::ConvertBlockToEngine(g->block(), cfg.convert_info, static_params);
         AddEngineToGraph(new_mod, new_g, engine, cuda_device);
+      }
+      for(auto input: new_g->block()->inputs()){
+        LOG_DEBUG("input name:" << input->debugName());
+        if(input->debugName().find(".") != std::string::npos){
+          auto pos = input->debugName().find(".");
+          auto newName = input->debugName().replace(pos, 1, "_");
+          input->setDebugName(newName);
+          LOG_DEBUG("changed name:" << input->debugName());
+        }
       }
       auto new_method = new_mod._ivalue()->compilation_unit()->create_function(method.name(), new_g);
       auto schema = util::GenerateGraphSchema(new_method->name(), new_g);
