@@ -222,7 +222,7 @@ void AddIfBlockToGraph(
 GraphAndMapping ConstructFallbackGraph(
     torch::jit::script::Module& new_mod,
     torch::jit::Block* block,
-    std::unordered_map<const torch::jit::Value*, torch::jit::IValue> example_tensor_map,
+    std::vector<std::unordered_map<const torch::jit::Value*, torch::jit::IValue>> example_tensor_maps,
     CompileSpec cfg,
     ir::StaticParams static_params,
     std::unordered_map<torch::jit::Node*, int>& fallback_nodes) {
@@ -231,7 +231,7 @@ GraphAndMapping ConstructFallbackGraph(
 
   auto new_g = std::make_shared<torch::jit::Graph>();
 
-  auto segmented_blocks = partitioning::Partition(block, example_tensor_map, partition_info, fallback_nodes);
+  auto segmented_blocks = partitioning::Partition(block, example_tensor_maps, partition_info, fallback_nodes);
 
   // the mapping from lowering graph => fallback global graph
   std::unordered_map<torch::jit::Value*, torch::jit::Value*> old_to_new_g;
@@ -273,7 +273,7 @@ GraphAndMapping ConstructFallbackGraph(
         std::vector<GraphAndMapping> graph_and_mappings;
         for (auto cur_block : if_node->blocks()) {
           graph_and_mappings.push_back(
-              ConstructFallbackGraph(new_mod, cur_block, example_tensor_map, cfg, static_params, fallback_nodes));
+              ConstructFallbackGraph(new_mod, cur_block, example_tensor_maps, cfg, static_params, fallback_nodes));
         }
         AddIfBlockToGraph(new_g, if_node, graph_and_mappings, old_to_new_g);
 
