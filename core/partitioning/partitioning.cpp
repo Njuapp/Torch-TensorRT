@@ -120,7 +120,7 @@ std::set<torch::jit::Node*> getDependentNodes(torch::jit::Node* n) {
   }
   if (const auto* schema = n->maybeSchema()) {
     for (size_t i = 0; i < n->inputs().size(); ++i) {
-      const at::AliasInfo* formal = schema->arguments()[i].alias_info();
+      auto formal = schema->arguments()[i].alias_info();
       if (formal && formal->isWrite()) {
         for (auto use : n->inputs()[i]->uses()) {
           torch::jit::Node* use_node = use.user;
@@ -190,7 +190,7 @@ bool isModifyingNodes(torch::jit::Node* node, torch::jit::Value* val) {
   }
   for (size_t i = 0; i < node->inputs().size(); ++i) {
     if (node->inputs()[i] == val) {
-      const at::AliasInfo* formal = schema->arguments()[i].alias_info();
+      auto formal = schema->arguments()[i].alias_info();
       if (formal && formal->isWrite()) {
         LOG_GRAPH(
             util::node_info(node) << " is a modifying node for value " << val->debugName()
