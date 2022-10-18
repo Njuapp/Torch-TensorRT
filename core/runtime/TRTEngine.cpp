@@ -82,7 +82,7 @@ TRTEngine::TRTEngine(std::string mod_name, std::string serialized_engine, CudaDe
   }
   num_io = std::make_pair(inputs, outputs);
 
-  LOG_DEBUG(*this);
+  // LOG_DEBUG(*this);
 }
 
 TRTEngine& TRTEngine::operator=(const TRTEngine& other) {

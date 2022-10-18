@@ -27,6 +27,7 @@ cpp/ptq/datasets/data/
 tests/accuracy/datasets/data/*
 ._.DS_Store
 *.tar.gz
+*.tar.xz
 *.tgz
 docsrc/_build
 docsrc/_notebooks
