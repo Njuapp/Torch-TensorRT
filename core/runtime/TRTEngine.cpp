@@ -145,7 +145,6 @@ TRTEngine::TRTEngine(
 #ifndef NDEBUG
   this->enable_profiling();
 #endif
-  LOG_DEBUG(*this);
 }
 
 TRTEngine::~TRTEngine() {
